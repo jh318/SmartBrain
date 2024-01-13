@@ -11,11 +11,11 @@ import ParticlesBg from 'particles-bg';
   
 const returnClarifaiJSONRequestOptions = (imageUrl) => {
   // Your PAT (Personal Access Token) can be found in the portal under Authentification
-  const PAT = '';
+  const PAT = '2d807afce32a4f0ea7015661c3b55265';
   // Specify the correct user_id/app_id pairings
   // Since you're making inferences outside your app's scope
-  const USER_ID = '';       
-  const APP_ID = '';
+  const USER_ID = 'jh318';       
+  const APP_ID = 'my-first-application-r7vgek';
   // Change these to whatever model and image URL you want to use
   //const MODEL_ID = 'face-detection';
   const IMAGE_URL = imageUrl;
@@ -56,8 +56,25 @@ class App extends Component {
       imageUrl: '',
       box: {},
       route: 'signin',
-      isSignedIn: false
+      isSignedIn: false,
+      user: {
+        id: '',
+        name: '',
+        email: '',
+        entries: 0,
+        joined: ''
+      }
     }
+  }
+
+  loadUser = (data) => {
+    this.setState({user: {
+      id: data.id,
+      name: data.name,
+      email: data.email,
+      entries: data.entries,
+      joined: data.joined
+    }})
   }
 
   calculateFaceLocation = (data) => {
@@ -86,7 +103,22 @@ class App extends Component {
 
     fetch("https://api.clarifai.com/v2/models/" + 'face-detection'  + "/outputs", returnClarifaiJSONRequestOptions(this.state.input))
       .then(response => response.json())
-      .then(response =>  this.displayFaceBox(this.calculateFaceLocation(response)))
+      .then(response => {
+        if (response) {
+          fetch('http://localhost:3000/image', {
+            method: 'put',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+              id: this.state.user.id
+            })
+          })
+          .then(response => response.json())
+          .then(count => {
+            this.setState(Object.assign(this.state.user, { entries: count}))
+          })
+         }
+        this.displayFaceBox(this.calculateFaceLocation(response))
+      })
       .catch(err => console.log(err));
   }
 
@@ -110,7 +142,7 @@ class App extends Component {
         { route === 'home' 
           ? <div>
             <Logo />
-            <Rank />
+            <Rank name={this.state.user.name} entries={this.state.user.entries}/>
             <ImageLinkForm 
               onInputChange={this.onInputChange} 
               onButtonSubmit={this.onButtomSubmit}
@@ -119,8 +151,8 @@ class App extends Component {
           </div>
           : (
               route === 'signin' 
-                ? <Signin onRouteChange={this.onRouteChange}/>
-                : <Register onRouteChange={this.onRouteChange}/>
+                ? <Signin loadUser={this.loadUser} onRouteChange={this.onRouteChange}/>
+                : <Register loadUser={this.loadUser} onRouteChange={this.onRouteChange}/>
             )
         }
       </div>
