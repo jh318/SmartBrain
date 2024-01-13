@@ -8,44 +8,20 @@ import Logo from './components/Logo/Logo.js';
 import ImageLinkForm from './components/ImageLinkForm/ImageLinkForm.js';
 import Rank from './components/Rank/Rank.js';
 import ParticlesBg from 'particles-bg';
-  
-const returnClarifaiJSONRequestOptions = (imageUrl) => {
-  // Your PAT (Personal Access Token) can be found in the portal under Authentification
-  const PAT = '2d807afce32a4f0ea7015661c3b55265';
-  // Specify the correct user_id/app_id pairings
-  // Since you're making inferences outside your app's scope
-  const USER_ID = 'jh318';       
-  const APP_ID = 'my-first-application-r7vgek';
-  // Change these to whatever model and image URL you want to use
-  //const MODEL_ID = 'face-detection';
-  const IMAGE_URL = imageUrl;
-  
-  const raw = JSON.stringify({
-    "user_app_id": {
-        "user_id": USER_ID,
-        "app_id": APP_ID
-    },
-    "inputs": [
-        {
-            "data": {
-                "image": {
-                    "url": IMAGE_URL
-                }
-            }
-        }
-    ]
-  });
 
-  const requestOptions = {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Authorization': 'Key ' + PAT
-    },
-   body: raw
-  };
-
-  return requestOptions;
+const initialState = {
+  input: '',
+  imageUrl: '',
+  box: {},
+  route: 'signin',
+  isSignedIn: false,
+  user: {
+    id: '',
+    name: '',
+    email: '',
+    entries: 0,
+    joined: ''
+  }
 }
 
 class App extends Component {
@@ -78,19 +54,20 @@ class App extends Component {
   }
 
   calculateFaceLocation = (data) => {
-    const clarifaiFace = data.outputs[0].data.regions[0].region_info.bounding_box;
-    const image = document.getElementById('inputimage');
+    const image = document.getElementById("inputimage");
     const width = Number(image.width);
     const height = Number(image.height);
+    const clarifaiFace = JSON.parse(data).outputs[0].data.regions[0].region_info.bounding_box;
     return {
       leftCol: clarifaiFace.left_col * width,
-      topRow: clarifaiFace.top_row * height,
+      topRow: clarifaiFace.top_row * height, 
       rightCol: width - (clarifaiFace.right_col * width),
       bottomRow: height - (clarifaiFace.bottom_row * height)
-    }
+    } 
   }
 
   displayFaceBox = (box) => {
+    console.log(box)
     this.setState({box: box});
   }
 
@@ -99,32 +76,39 @@ class App extends Component {
   }
 
   onButtomSubmit = () => {
-    this.setState({imageUrl: this.state.input});
+    this.setState({ imageUrl: this.state.input })
 
-    fetch("https://api.clarifai.com/v2/models/" + 'face-detection'  + "/outputs", returnClarifaiJSONRequestOptions(this.state.input))
-      .then(response => response.json())
-      .then(response => {
-        if (response) {
-          fetch('http://localhost:3000/image', {
-            method: 'put',
-            headers: {'Content-Type': 'application/json'},
+    fetch("http://localhost:3000/imageurl", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: this.state.input,
+      }),
+    })
+      .then((response) => response.json())
+      .then((result) => {
+        console.log(result)
+        this.displayFaceBox(this.calculateFaceLocation(result))
+        if (result) {
+          fetch("http://localhost:3000/image", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              id: this.state.user.id
+              id: this.state.user.id,
+            }),
+          })
+            .then((result) => result.json())
+            .then((count) => {
+              this.setState(Object.assign(this.state.user, { entries: count }))
             })
-          })
-          .then(response => response.json())
-          .then(count => {
-            this.setState(Object.assign(this.state.user, { entries: count}))
-          })
-         }
-        this.displayFaceBox(this.calculateFaceLocation(response))
+        }
       })
-      .catch(err => console.log(err));
+      .catch((error) => console.log("error", error))
   }
 
   onRouteChange = (route) => {
     if (route === 'signout') {
-      this.setState({isSignedIn: false});
+      this.setState(initialState);
     }
     else if (route === 'home')
     {
@@ -139,7 +123,7 @@ class App extends Component {
       <div className="App">
       <ParticlesBg color="#FFFFFF" num={100} type="cobweb" bg={true} />
         <Navigation isSignedIn={isSignedIn} onRouteChange={this.onRouteChange} />
-        { route === 'home' 
+        { route === 'home'
           ? <div>
             <Logo />
             <Rank name={this.state.user.name} entries={this.state.user.entries}/>
@@ -150,7 +134,7 @@ class App extends Component {
             <FaceRecognition box={this.state.box} imageUrl={this.state.imageUrl}/>
           </div>
           : (
-              route === 'signin' 
+              route === 'signin' || route === 'signout'
                 ? <Signin loadUser={this.loadUser} onRouteChange={this.onRouteChange}/>
                 : <Register loadUser={this.loadUser} onRouteChange={this.onRouteChange}/>
             )
