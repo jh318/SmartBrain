@@ -11,11 +11,11 @@ import ParticlesBg from 'particles-bg';
   
 const returnClarifaiJSONRequestOptions = (imageUrl) => {
   // Your PAT (Personal Access Token) can be found in the portal under Authentification
-  const PAT = '2d807afce32a4f0ea7015661c3b55265';
+  const PAT = '';
   // Specify the correct user_id/app_id pairings
   // Since you're making inferences outside your app's scope
-  const USER_ID = 'jh318';       
-  const APP_ID = 'my-first-application-r7vgek';
+  const USER_ID = '';       
+  const APP_ID = '';
   // Change these to whatever model and image URL you want to use
   //const MODEL_ID = 'face-detection';
   const IMAGE_URL = imageUrl;
